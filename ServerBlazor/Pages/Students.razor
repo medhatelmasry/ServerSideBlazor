@@ -1,0 +1,141 @@
+@page "/students"
+@using ServerBlazor.Data
+@inject StudentService studentService
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates managing students data.</p>
+
+@if (students == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <button onclick="@Add" class="btn btn-success">Add</button>
+    <table class='table table-hover'>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>School</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in students)
+            {
+            <tr onclick="@(() => Show(item.StudentId))">
+                <td>@item.StudentId</td>
+                <td>@item.FirstName</td>
+                <td>@item.LastName</td>
+                <td>@item.School</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (students != null && mode == MODE.Add)
+{
+    <input placeholder="First Name" bind="@firstName" /><br />
+    <input placeholder="Last Name" bind="@lastName" /><br />
+    <input placeholder="School" bind="@school" /><br />
+    <button onclick="@Insert" class="btn btn-warning">Insert</button>
+}
+
+@if (students != null && mode == MODE.EditDelete) // Update & Delete form
+{
+    <input type="hidden" bind="@studentId" /><br />
+    <input placeholder="First Name" bind="@firstName" /><br />
+    <input placeholder="Last Name" bind="@lastName" /><br />
+    <input placeholder="School" bind="@school" /><br />
+    <button onclick="@Update" class="btn btn-primary">Update</button>
+    <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+    <button onclick="@Delete" class="btn btn-danger">Delete</button>
+}
+
+@functions {
+    Student[] students;
+
+    string studentId;
+    string firstName;
+    string lastName;
+    string school;
+
+    private enum MODE { None, Add, EditDelete };
+    MODE mode = MODE.None;
+    Student student;
+
+    protected override async Task OnInitAsync()
+    {
+        await load();
+    }
+
+    protected async Task load()
+    {
+        students = await studentService.GetStudentsAsync();
+    }
+
+    protected async Task Insert()
+    {
+
+        Student s = new Student()
+        {
+            StudentId = Guid.NewGuid().ToString(),
+            FirstName = firstName,
+            LastName = lastName,
+            School = school
+        };
+
+        await studentService.InsertStudentAsync(s);
+        ClearFields();
+        await load();
+        mode = MODE.None;
+    }
+
+    protected void ClearFields()
+    {
+        studentId = string.Empty;
+        firstName = string.Empty;
+        lastName = string.Empty;
+        school = string.Empty;
+    }
+
+    protected void Add()
+    {
+        ClearFields();
+        mode = MODE.Add;
+    }
+
+    protected async Task Update() {
+
+      Student s = new Student() {
+        StudentId = studentId,
+        FirstName = firstName,
+        LastName = lastName,
+        School = school
+      };
+
+      await studentService.UpdateStudentAsync(studentId, s);
+      ClearFields();
+      await load();
+      mode = MODE.None;
+    }
+
+    protected async Task Delete() {
+      await studentService.DeleteStudentAsync(studentId);
+      ClearFields();
+      await load();
+      mode = MODE.None;
+    }
+
+    protected async Task Show(string id) {
+      student = await studentService.GetStudentsByIdAsync(id);
+      studentId = student.StudentId;
+      firstName = student.FirstName;
+      lastName = student.LastName;
+      school = student.School;
+      mode = MODE.EditDelete;
+    }
+}
